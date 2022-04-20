@@ -1,0 +1,50 @@
+import sqlite3
+import os
+import sys
+
+class DBwork:
+    def __init__(self):
+        self.dbFile = 'db\\logging.db'
+        self.dir = os.path.split(os.path.abspath(__file__))[0]
+        
+    def addToDB(user_id, command, message):
+        dbFile = 'db\\logging.db'
+        dbDir = os.path.split(os.path.abspath(__file__))[0]
+        # Добавление в базу данных
+        errors_lst = []
+        try:
+            con = sqlite3.connect(os.path.join(dbDir, dbFile))
+        except sqlite3.DatabaseError:
+            errors_lst.append('Не удалось подключиться к базе данных')
+            return errors_lst
+    
+        try:
+            cur = con.cursor()
+            sql = """\
+CREATE TABLE IF NOT EXISTS log (
+    id         INTEGER  PRIMARY KEY AUTOINCREMENT NOT NULL,
+    user_id    INT  NOT NULL,
+    datetime   DATETIME DEFAULT (CURRENT_TIMESTAMP) NOT NULL,
+    command    NOT NULL,
+    message    NOT NULL
+);
+"""
+            cur.executescript(sql)
+        except sqlite3.DatabaseError:
+            errors_lst.append('Ошибка создания таблицы.')
+            return errors_lst
+    
+        values = (user_id, command, message)
+        req = "INSERT INTO log (user_id, datetime, command, message)" \
+            "VALUES (?, DATETIME('now', 'localtime'), ?, ?)"
+        try:
+            cur.execute(req, values)
+        except sqlite3.DatabaseError:
+            errors_lst.append('Не удалось добавить запись в базу данных.')
+            print(sys.exc_info())
+        else:
+            con.commit()
+    
+        cur.close()
+        con.close()
+        return errors_lst
